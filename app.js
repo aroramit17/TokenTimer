@@ -1,0 +1,628 @@
+const FIVE_HOURS = 5 * 60 * 60 * 1000;
+const STORAGE_KEY = "usage-reset-timers";
+const SETTINGS_KEY = "usage-reset-settings";
+const THEME_KEY = "tokentimer-theme";
+const DEFAULT_TITLE = "TokenTimer";
+const SOON_THRESHOLD = 30 * 60 * 1000;
+const BLINK_THRESHOLD = 60 * 1000;
+const ALERT_COLOR = "#22c55e";
+
+const TIMER_CONFIG = {
+  codex: {
+    label: "Codex",
+    short: "Cx",
+    color: "#f97316",
+  },
+  claude: {
+    label: "Claude",
+    short: "Cl",
+    color: "#111111",
+  },
+};
+
+const state = loadState();
+const settings = loadSettings();
+normalizeSettings();
+const timerEls = new Map();
+const themeToggle = document.getElementById("theme-toggle");
+const themeLabel = document.querySelector("[data-theme-label]");
+const themeMeta = document.querySelector("meta[name='theme-color']");
+const shareButton = document.getElementById("share-site");
+
+applyTheme(localStorage.getItem(THEME_KEY) || "light");
+
+document.querySelectorAll("[data-timer]").forEach((card) => {
+  const id = card.dataset.timer;
+  timerEls.set(id, {
+    card,
+    form: card.querySelector("[data-form]"),
+    manualForm: card.querySelector("[data-manual-form]"),
+    input: card.querySelector("[name='resetText']"),
+    hoursInput: card.querySelector("[name='hours']"),
+    minutesInput: card.querySelector("[name='minutes']"),
+    ring: card.querySelector("[data-ring]"),
+    countdown: card.querySelector("[data-countdown]"),
+    subtitle: card.querySelector("[data-subtitle]"),
+    status: card.querySelector("[data-status]"),
+    tabToggle: card.querySelector("[data-tab-toggle]"),
+    modeInputs: card.querySelectorAll("[data-mode-toggle] input"),
+    hourHand: card.querySelector("[data-hour-hand]"),
+    minuteHand: card.querySelector("[data-minute-hand]"),
+    secondHand: card.querySelector("[data-second-hand]"),
+    quickButtons: card.querySelectorAll("[data-quick-minutes]"),
+    swatchButtons: card.querySelectorAll("[data-swatch]"),
+  });
+});
+
+timerEls.forEach((els, id) => {
+  applyAccent(id, settings[id]?.color || TIMER_CONFIG[id].color);
+  els.tabToggle.checked = settings[id]?.showInTab !== false;
+  applyClockMode(id, settings[id]?.clockMode || "digital");
+
+  els.form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    startTimerFromText(id, els.input.value);
+  });
+
+  els.manualForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    startTimerFromManualInputs(id);
+  });
+
+  els.input.addEventListener("paste", () => {
+    window.setTimeout(() => {
+      const reset = parseResetText(els.input.value);
+      if (reset) {
+        startTimer(id, reset);
+      }
+    });
+  });
+
+  els.quickButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      startTimer(id, Number(button.dataset.quickMinutes) * 60 * 1000);
+    });
+  });
+
+  els.swatchButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setAccent(id, button.dataset.swatch);
+    });
+  });
+
+  els.tabToggle.addEventListener("change", () => {
+    setTabVisibility(id, els.tabToggle.checked);
+  });
+
+  els.modeInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        setClockMode(id, input.value);
+      }
+    });
+  });
+});
+
+document.querySelectorAll("[data-example]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const target = getPreferredInput();
+    target.value = button.dataset.example;
+    target.focus();
+  });
+});
+
+prefillResetTextFromUrl();
+
+document.getElementById("reset-all").addEventListener("click", () => {
+  Object.keys(TIMER_CONFIG).forEach((id) => delete state[id]);
+  saveState();
+  timerEls.forEach((els) => {
+    els.input.value = "";
+    els.hoursInput.value = "";
+    els.minutesInput.value = "";
+  });
+  render();
+});
+
+themeToggle.addEventListener("click", () => {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(nextTheme);
+});
+
+shareButton.addEventListener("click", shareSite);
+
+render();
+window.setInterval(render, 1000);
+
+function startTimerFromText(id, text) {
+  const reset = parseResetText(text);
+  const els = timerEls.get(id);
+
+  if (!reset) {
+    els.input.setCustomValidity("Try text like: Resets in 42 min, Resets 1:57 PM, 1h 20m, or 5 hours.");
+    els.input.reportValidity();
+    window.setTimeout(() => els.input.setCustomValidity(""), 1600);
+    return;
+  }
+
+  startTimer(id, reset);
+}
+
+function startTimerFromManualInputs(id) {
+  const els = timerEls.get(id);
+  const hours = parseWholeNumber(els.hoursInput.value);
+  const minutes = parseWholeNumber(els.minutesInput.value);
+  const duration = ((hours * 60) + minutes) * 60 * 1000;
+
+  if (hours > 99 || minutes > 59) {
+    els.minutesInput.setCustomValidity("Use 0-99 hours and 0-59 minutes.");
+    els.minutesInput.reportValidity();
+    window.setTimeout(() => els.minutesInput.setCustomValidity(""), 1600);
+    return;
+  }
+
+  if (duration <= 0) {
+    els.minutesInput.setCustomValidity("Enter at least 1 minute.");
+    els.minutesInput.reportValidity();
+    window.setTimeout(() => els.minutesInput.setCustomValidity(""), 1600);
+    return;
+  }
+
+  startTimer(id, { duration });
+}
+
+function startTimer(id, reset) {
+  const now = Date.now();
+  const duration = typeof reset === "number" ? reset : reset.duration;
+  const endsAt = reset.endsAt || (now + duration);
+
+  state[id] = {
+    startedAt: now,
+    endsAt,
+    durationMs: Math.max(1000, endsAt - now),
+    cycleMs: FIVE_HOURS,
+  };
+  saveState();
+
+  const els = timerEls.get(id);
+  els.input.value = "";
+  els.hoursInput.value = "";
+  els.minutesInput.value = "";
+  render();
+}
+
+function parseResetText(text) {
+  const source = String(text || "").toLowerCase().replace(/,/g, " ").trim();
+  const absoluteTime = parseAbsoluteClockTime(source);
+  if (absoluteTime) {
+    return absoluteTime;
+  }
+
+  let total = 0;
+  const unitPattern = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|hr|h|minutes?|mins?|min|m|seconds?|secs?|sec|s)\b/g;
+  let match;
+
+  while ((match = unitPattern.exec(source))) {
+    const value = Number(match[1]);
+    const unit = match[2];
+
+    if (unit.startsWith("h")) total += value * 60 * 60 * 1000;
+    else if (unit.startsWith("m")) total += value * 60 * 1000;
+    else if (unit.startsWith("s")) total += value * 1000;
+  }
+
+  if (!total) {
+    const colon = source.match(/\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/);
+    if (colon) {
+      const first = Number(colon[1]);
+      const second = Number(colon[2]);
+      const third = Number(colon[3] || 0);
+      total = colon[3]
+        ? (first * 60 * 60 * 1000) + (second * 60 * 1000) + (third * 1000)
+        : (first * 60 * 1000) + (second * 1000);
+    }
+  }
+
+  return total > 0 ? { duration: total } : null;
+}
+
+function parseAbsoluteClockTime(source) {
+  const clock = source.match(/\b(\d{1,2})(?::(\d{2}))?\s*([ap]\.?m\.?)\b/i);
+  if (!clock) return null;
+
+  let hours = Number(clock[1]);
+  const minutes = Number(clock[2] || 0);
+  const meridiem = clock[3].replace(/\./g, "");
+
+  if (hours < 1 || hours > 12 || minutes > 59) return null;
+  if (meridiem === "pm" && hours !== 12) hours += 12;
+  if (meridiem === "am" && hours === 12) hours = 0;
+
+  const now = new Date();
+  const endsAt = new Date(now);
+  endsAt.setHours(hours, minutes, 0, 0);
+
+  if (endsAt.getTime() <= now.getTime()) {
+    endsAt.setDate(endsAt.getDate() + 1);
+  }
+
+  return {
+    endsAt: endsAt.getTime(),
+    duration: endsAt.getTime() - now.getTime(),
+  };
+}
+
+function normalizeTimer(timer, now) {
+  if (!timer) return null;
+
+  const cycleMs = timer.cycleMs || FIVE_HOURS;
+  timer.durationMs = timer.durationMs || cycleMs;
+  timer.startedAt = timer.startedAt || (timer.endsAt - timer.durationMs);
+
+  if (timer.endsAt <= now) {
+    const missedCycles = Math.floor((now - timer.endsAt) / cycleMs) + 1;
+    const previousEndsAt = timer.endsAt;
+    timer.endsAt = previousEndsAt + (missedCycles * cycleMs);
+    timer.startedAt = timer.endsAt - cycleMs;
+    timer.durationMs = cycleMs;
+    timer.cycleMs = cycleMs;
+    saveState();
+  }
+
+  return timer;
+}
+
+function render() {
+  const now = Date.now();
+  const active = [];
+
+  Object.keys(TIMER_CONFIG).forEach((id) => {
+    const timer = normalizeTimer(state[id], now);
+    const els = timerEls.get(id);
+
+    if (!timer) {
+      renderEmpty(els);
+      return;
+    }
+
+    const remaining = Math.max(0, timer.endsAt - now);
+    const duration = Math.max(1000, timer.durationMs || timer.cycleMs || FIVE_HOURS);
+    const progress = (now - timer.startedAt) / duration;
+    const endsAt = new Date(timer.endsAt);
+
+    els.card.classList.toggle("is-expired", remaining <= 1000);
+    els.countdown.textContent = formatDuration(remaining);
+    els.subtitle.textContent = `Resets at ${formatClockTime(endsAt)}`;
+    els.status.textContent = "Running";
+    els.ring.style.setProperty("--progress", `${Math.max(0, Math.min(1, progress)) * 360}deg`);
+    renderAnalogHands(els, remaining);
+
+    active.push({
+      id,
+      remaining,
+      progress,
+      color: getAccent(id),
+      short: TIMER_CONFIG[id].short,
+    });
+  });
+
+  renderDocumentChrome(active);
+}
+
+function setAccent(id, color) {
+  if (!color) return;
+  settings[id] = {
+    ...settings[id],
+    color,
+  };
+  saveSettings();
+  applyAccent(id, color);
+  render();
+}
+
+function setTabVisibility(id, showInTab) {
+  settings[id] = {
+    ...settings[id],
+    showInTab,
+  };
+  saveSettings();
+  render();
+}
+
+function setClockMode(id, clockMode) {
+  settings[id] = {
+    ...settings[id],
+    clockMode,
+  };
+  saveSettings();
+  applyClockMode(id, clockMode);
+}
+
+function applyClockMode(id, clockMode) {
+  const els = timerEls.get(id);
+  const nextMode = clockMode === "analog" ? "analog" : "digital";
+  if (!els) return;
+
+  els.card.dataset.clockMode = nextMode;
+  els.modeInputs.forEach((input) => {
+    input.checked = input.value === nextMode;
+  });
+}
+
+function getAccent(id) {
+  return settings[id]?.color || TIMER_CONFIG[id].color;
+}
+
+function applyAccent(id, color) {
+  const els = timerEls.get(id);
+  if (!els) return;
+
+  els.card.style.setProperty("--accent", color);
+  els.swatchButtons.forEach((button) => {
+    const isSelected = button.dataset.swatch.toLowerCase() === color.toLowerCase();
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+  });
+}
+
+function renderEmpty(els) {
+  els.card.classList.remove("is-expired");
+  els.card.dataset.clockMode = els.card.dataset.clockMode || "digital";
+  els.countdown.textContent = "--:--";
+  els.subtitle.textContent = "Paste a reset";
+  els.status.textContent = "Idle";
+  els.ring.style.setProperty("--progress", "0deg");
+  renderAnalogHands(els, 0);
+}
+
+function renderDocumentChrome(active) {
+  const visible = active.filter((timer) => settings[timer.id]?.showInTab !== false);
+
+  if (!visible.length) {
+    document.title = DEFAULT_TITLE;
+    drawFavicon([]);
+    return;
+  }
+
+  visible.sort((a, b) => a.remaining - b.remaining);
+  const soonest = visible[0].remaining;
+  const isBlinking = soonest <= BLINK_THRESHOLD;
+  const isSoon = soonest <= SOON_THRESHOLD;
+  const blinkOn = Math.floor(Date.now() / 1000) % 2 === 0;
+  const title = visible.map((timer) => `${formatCompact(timer.remaining)} ${timer.short}`).join(" | ");
+
+  document.title = isBlinking && blinkOn ? `RESET SOON | ${title}` : title;
+  drawFavicon(visible, {
+    alertColor: isSoon ? ALERT_COLOR : null,
+    blink: isBlinking && blinkOn,
+  });
+}
+
+function getPreferredInput() {
+  const activeElement = document.activeElement;
+  if (activeElement?.matches?.("[name='resetText']")) {
+    return activeElement;
+  }
+
+  return timerEls.get("codex").input;
+}
+
+function prefillResetTextFromUrl() {
+  const resetText = new URLSearchParams(window.location.search).get("resetText");
+  if (!resetText) return;
+
+  timerEls.forEach((els) => {
+    els.input.value = resetText;
+  });
+}
+
+function renderAnalogHands(els, remaining) {
+  const totalSeconds = Math.max(0, Math.ceil(remaining / 1000));
+  const seconds = totalSeconds % 60;
+  const minutes = Math.floor(totalSeconds / 60) % 60;
+  const hours = Math.floor(totalSeconds / 3600) % 12;
+
+  const secondAngle = (seconds * 6) - 90;
+  const minuteAngle = ((minutes + (seconds / 60)) * 6) - 90;
+  const hourAngle = ((hours + (minutes / 60)) * 30) - 90;
+
+  els.secondHand.style.transform = `rotate(${secondAngle}deg)`;
+  els.minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
+  els.hourHand.style.transform = `rotate(${hourAngle}deg)`;
+}
+
+async function shareSite() {
+  const shareData = {
+    title: "TokenTimer",
+    text: "Track Codex and Claude usage reset timers.",
+    url: window.location.href.split("#")[0],
+  };
+
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(shareData.url);
+      flashShareLabel("Copied");
+    }
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      flashShareLabel("Unable");
+    }
+  }
+}
+
+function flashShareLabel(label) {
+  const original = shareButton.textContent;
+  shareButton.textContent = label;
+  window.setTimeout(() => {
+    shareButton.textContent = original;
+  }, 1600);
+}
+
+function drawFavicon(active, options = {}) {
+  const canvas = document.createElement("canvas");
+  const size = 64;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0, 0, size, size);
+  const styles = getComputedStyle(document.documentElement);
+  const paper = styles.getPropertyValue("--paper").trim() || "#f7f2ea";
+  const line = styles.getPropertyValue("--line").trim() || "#d8cec0";
+  const ink = styles.getPropertyValue("--ink").trim() || "#171310";
+
+  ctx.fillStyle = paper;
+  ctx.beginPath();
+  ctx.arc(32, 32, 30, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.lineWidth = 9;
+  ctx.strokeStyle = line;
+  ctx.beginPath();
+  ctx.arc(32, 32, 23, 0, Math.PI * 2);
+  ctx.stroke();
+
+  if (!active.length) {
+    ctx.fillStyle = ink;
+    ctx.beginPath();
+    ctx.arc(32, 32, 8, 0, Math.PI * 2);
+    ctx.fill();
+    setFavicon(canvas.toDataURL("image/png"));
+    return;
+  }
+
+  const timers = active.slice(0, 2);
+  timers.forEach((timer, index) => {
+    const start = timers.length === 1 ? -Math.PI / 2 : (index === 0 ? -Math.PI / 2 : Math.PI / 2);
+    const range = timers.length === 1 ? Math.PI * 2 : Math.PI;
+    ctx.strokeStyle = options.blink ? ink : (options.alertColor || timer.color);
+    ctx.beginPath();
+    ctx.arc(32, 32, 23, start, start + (range * timer.progress));
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = options.blink ? ink : (options.alertColor || active[0].color);
+  ctx.beginPath();
+  ctx.arc(32, 32, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  setFavicon(canvas.toDataURL("image/png"));
+}
+
+function setFavicon(url) {
+  let link = document.querySelector("link[rel='icon']");
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = url;
+}
+
+function applyTheme(theme) {
+  const nextTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = nextTheme;
+  localStorage.setItem(THEME_KEY, nextTheme);
+
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", String(nextTheme === "dark"));
+  }
+
+  if (themeLabel) {
+    themeLabel.textContent = nextTheme === "dark" ? "Light" : "Dark";
+  }
+
+  if (themeMeta) {
+    themeMeta.setAttribute("content", nextTheme === "dark" ? "#100d0a" : "#f7f2ea");
+  }
+
+  if (timerEls.size) {
+    render();
+  } else {
+    renderDocumentChrome([]);
+  }
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.ceil(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${pad(minutes)}:${pad(seconds)}`;
+  }
+
+  return `${minutes}:${pad(seconds)}`;
+}
+
+function formatCompact(ms) {
+  const totalMinutes = Math.max(1, Math.ceil(ms / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours && minutes) return `${hours}h${minutes}m`;
+  if (hours) return `${hours}h`;
+  return `${minutes}m`;
+}
+
+function formatClockTime(date) {
+  return new Intl.DateTimeFormat([], {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function pad(value) {
+  return String(value).padStart(2, "0");
+}
+
+function parseWholeNumber(value) {
+  const cleaned = String(value || "").replace(/[^\d]/g, "");
+  return Number(cleaned || 0);
+}
+
+function loadState() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function normalizeSettings() {
+  const legacyDefaults = {
+    codex: "#15957a",
+    claude: "#b75c2d",
+  };
+  let changed = false;
+
+  Object.keys(TIMER_CONFIG).forEach((id) => {
+    if (settings[id]?.color?.toLowerCase() === legacyDefaults[id]) {
+      settings[id].color = TIMER_CONFIG[id].color;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveSettings();
+  }
+}
