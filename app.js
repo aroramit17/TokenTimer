@@ -507,32 +507,31 @@ function drawFavicon(active, options = {}) {
   const background = "#000000";
   const foreground = "#ffffff";
   const label = formatFaviconLabel(timer.remaining);
+  const fontSize = getFaviconFontSize(label);
 
   ctx.fillStyle = background;
-  roundedRect(ctx, 8, 8, 112, 112, 28);
+  roundedRect(ctx, 4, 4, 120, 120, 18);
   ctx.fill();
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = options.blink ? "#ffffff" : "#000000";
+  ctx.lineWidth = options.blink ? 10 : 4;
+  ctx.strokeStyle = "#ffffff";
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
-  roundedRect(ctx, 18, 18, 92, 18, 9);
-  ctx.fill();
-
   ctx.fillStyle = foreground;
-  ctx.font = "900 52px Arial, sans-serif";
+  ctx.font = `900 ${fontSize}px Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, 64, 67);
-
-  ctx.font = "900 18px Arial, sans-serif";
-  ctx.fillText(timer.short, 64, 104);
-
-  ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
-  roundedRect(ctx, 16, 112, 96 * Math.max(0.05, 1 - timer.progress), 7, 4);
-  ctx.fill();
+  ctx.shadowColor = "rgba(255, 255, 255, 0.22)";
+  ctx.shadowBlur = 8;
+  ctx.fillText(label, 64, 64);
+  ctx.shadowBlur = 0;
 
   setFavicon(canvas.toDataURL("image/png"));
+}
+
+function getFaviconFontSize(label) {
+  if (label.length <= 2) return 72;
+  if (label.length === 3) return 62;
+  return 52;
 }
 
 function formatFaviconLabel(ms) {
