@@ -71,7 +71,7 @@ main,
 }
 
 main {
-  padding: 20px 0;
+  padding: 16px 0;
 }
 
 .site-header {
@@ -206,9 +206,18 @@ main {
 .hero {
   align-items: end;
   display: grid;
-  gap: 18px;
+  gap: 16px;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 24px 0 16px;
+  padding: 18px 0 12px;
+}
+
+.has-active-timer .hero {
+  justify-content: end;
+  padding: 10px 0 8px;
+}
+
+.has-active-timer .hero-copy {
+  display: none;
 }
 
 .hero-copy {
@@ -241,8 +250,8 @@ h2 {
 }
 
 h1 {
-  font-size: clamp(2.1rem, 5vw, 4.15rem);
-  max-width: 760px;
+  font-size: clamp(1.7rem, 3.4vw, 2.75rem);
+  max-width: 620px;
 }
 
 h2 {
@@ -251,16 +260,20 @@ h2 {
 
 .lede {
   color: var(--muted);
-  font-size: clamp(0.98rem, 1.55vw, 1.08rem);
+  font-size: clamp(0.92rem, 1.25vw, 1rem);
   font-weight: 650;
   line-height: 1.42;
   margin: 12px 0 0;
-  max-width: 640px;
+  max-width: 560px;
+}
+
+.has-active-timer .lede {
+  display: none;
 }
 
 .ghost-button,
-.example-strip button,
-.quick-row button,
+.command-bar button,
+.global-quick-row button,
 .input-row button,
 .manual-row button {
   border: 1px solid transparent;
@@ -277,20 +290,96 @@ h2 {
   white-space: nowrap;
 }
 
-.example-strip {
+.command-panel {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 0 0 12px;
+  padding: 0 0 14px;
 }
 
-.example-strip button {
+.command-bar {
+  align-items: center;
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.target-toggle {
+  background: color-mix(in srgb, var(--ink) 7%, var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, 1fr);
+  margin: 0;
+  padding: 4px;
+}
+
+.target-toggle label {
+  cursor: pointer;
+}
+
+.target-toggle input {
+  position: absolute;
+  opacity: 0;
+}
+
+.target-toggle span {
+  border-radius: 999px;
+  color: var(--muted);
+  display: grid;
+  font-size: 0.9rem;
+  font-weight: 900;
+  min-height: 36px;
+  min-width: 82px;
+  place-items: center;
+}
+
+.target-toggle input:checked + span {
+  background: var(--ink);
+  color: var(--panel);
+}
+
+.command-bar input {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 750;
+  min-height: 40px;
+  min-width: 0;
+  outline: 0;
+  padding: 0 6px;
+}
+
+.command-bar input::placeholder {
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+}
+
+.command-bar button,
+.global-quick-row button {
   background: color-mix(in srgb, var(--panel) 82%, transparent);
   border-color: var(--line);
   color: var(--ink);
   font-weight: 800;
   min-width: 0;
-  padding: 0 12px;
+  padding: 0 16px;
+}
+
+.global-quick-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.global-quick-row button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  min-height: 34px;
 }
 
 .timer-grid {
@@ -303,14 +392,45 @@ h2 {
   --accent: var(--codex);
   --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--panel));
   --accent-strong: color-mix(in srgb, var(--accent) 80%, var(--ink));
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--panel) 94%, transparent), color-mix(in srgb, var(--panel) 82%, transparent));
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: 24px;
   box-shadow: var(--shadow);
   display: grid;
-  gap: 12px;
+  gap: 22px;
   min-width: 0;
-  padding: clamp(16px, 2vw, 22px);
+  overflow: hidden;
+  padding: 32px;
+  position: relative;
+  isolation: isolate;
+}
+
+.timer-card::before {
+  background:
+    radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 34%),
+    linear-gradient(120deg, transparent 10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%);
+  content: "";
+  inset: -35%;
+  opacity: 0;
+  position: absolute;
+  transform: translate3d(-5%, -3%, 0);
+  z-index: -1;
+}
+
+.timer-card.is-running::before {
+  animation: cardPulse 12s ease-in-out infinite alternate;
+  opacity: 1;
+}
+
+@keyframes cardPulse {
+  from {
+    transform: translate3d(-7%, -4%, 0) rotate(0deg);
+  }
+
+  to {
+    transform: translate3d(6%, 4%, 0) rotate(8deg);
+  }
 }
 
 [data-timer="claude"] {
@@ -325,7 +445,8 @@ h2 {
 }
 
 .timer-head h2 {
-  font-size: 1.18rem;
+  color: var(--muted);
+  font-size: 1.02rem;
 }
 
 .tab-toggle {
@@ -366,6 +487,37 @@ h2 {
   gap: 6px;
   margin: -4px 0 0;
   padding: 0;
+}
+
+.card-settings {
+  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  padding-top: 4px;
+}
+
+.card-settings summary {
+  align-items: center;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.92rem;
+  font-weight: 900;
+  gap: 8px;
+  list-style: none;
+}
+
+.card-settings summary::-webkit-details-marker {
+  display: none;
+}
+
+.card-settings summary::before {
+  content: "+";
+  font-size: 0.92rem;
+}
+
+.settings-stack {
+  display: grid;
+  gap: 14px;
+  padding-top: 16px;
 }
 
 .mode-toggle legend {
@@ -428,8 +580,8 @@ h2 {
     inset 0 0 0 1px color-mix(in srgb, var(--panel) 90%, white),
     0 20px 54px color-mix(in srgb, var(--accent) 20%, transparent);
   display: grid;
-  max-width: 250px;
-  padding: 10px;
+  max-width: 370px;
+  padding: 14px;
   place-items: center;
   position: relative;
   width: min(76vw, 100%);
@@ -457,10 +609,10 @@ h2 {
   box-shadow: inset 0 1px 18px rgba(43, 39, 32, 0.04);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   height: 100%;
   justify-content: center;
-  padding: 16px;
+  padding: 24px;
   text-align: center;
   min-width: 0;
   width: 100%;
@@ -468,7 +620,7 @@ h2 {
 
 .clock-service {
   color: color-mix(in srgb, var(--accent) 76%, var(--ink));
-  font-size: clamp(1.12rem, 2.5vw, 1.55rem);
+  font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 950;
   line-height: 0.9;
   text-transform: uppercase;
@@ -486,8 +638,8 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-width: min(86%, 178px);
-  padding: 12px 8px 9px;
+  min-width: min(88%, 260px);
+  padding: 20px 14px 16px;
 }
 
 :root[data-theme="dark"] .digital-display {
@@ -498,7 +650,7 @@ h2 {
 .clock-face strong {
   color: #1b2418;
   font-family: "Courier New", ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: clamp(1.85rem, 3.6vw, 2.7rem);
+  font-size: clamp(3.1rem, 7vw, 5.25rem);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
@@ -509,13 +661,13 @@ h2 {
 
 .clock-face span {
   color: color-mix(in srgb, #1b2418 72%, transparent);
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 700;
 }
 
 .clock-face .clock-service {
   color: color-mix(in srgb, var(--accent) 76%, var(--ink));
-  font-size: clamp(1.12rem, 2.5vw, 1.55rem);
+  font-size: clamp(1.25rem, 3vw, 2rem);
   font-weight: 950;
 }
 
@@ -545,7 +697,7 @@ h2 {
     0 16px 32px rgba(23, 19, 16, 0.1);
   display: none;
   position: relative;
-  width: min(72%, 155px);
+  width: min(72%, 240px);
 }
 
 .timer-card[data-clock-mode="analog"] .digital-display {
@@ -725,13 +877,11 @@ h2 {
   width: 7px;
 }
 
-.paste-form,
 .manual-form {
   display: grid;
   gap: 6px;
 }
 
-.paste-form label,
 .manual-form label {
   color: var(--muted);
   font-size: 0.9rem;
@@ -790,73 +940,35 @@ h2 {
   justify-self: stretch;
 }
 
-.quick-row {
-  display: grid;
-  gap: 6px;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.quick-row button {
-  background: transparent;
-  border-color: var(--line);
-  color: var(--ink);
-  font-weight: 800;
-}
-
-@media (min-width: 900px) {
-  .timer-card {
-    align-items: start;
-    grid-template-areas:
-      "head head"
-      "tab mode"
-      "paste clock"
-      "manual clock"
-      "swatch quick";
-    grid-template-columns: minmax(0, 1fr) 250px;
-  }
-
-  .timer-head {
-    grid-area: head;
-  }
-
-  .tab-toggle {
-    grid-area: tab;
-  }
-
-  .mode-toggle {
-    grid-area: mode;
-  }
-
-  .clock-wrap {
-    align-self: center;
-    grid-area: clock;
-    justify-self: center;
-  }
-
-  .paste-form {
-    grid-area: paste;
-  }
-
-  .manual-form {
-    grid-area: manual;
-  }
-
-  .swatch-field {
-    align-self: center;
-    grid-area: swatch;
-  }
-
-  .quick-row {
-    align-self: center;
-    grid-area: quick;
-  }
-}
-
 .content-grid {
   display: grid;
   gap: 18px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 28px 0 8px;
+}
+
+.help-section {
+  margin-top: 18px;
+}
+
+.help-section > summary {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 900;
+  list-style: none;
+  padding: 10px 16px;
+}
+
+.help-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.help-section[open] > summary {
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  color: var(--ink);
 }
 
 .info-panel {
@@ -960,7 +1072,6 @@ button:active {
     width: 100%;
   }
 
-  .example-strip,
   .content-grid {
     grid-template-columns: 1fr;
   }

@@ -26,6 +26,8 @@ const themeToggle = document.getElementById("theme-toggle");
 const themeLabel = document.querySelector("[data-theme-label]");
 const themeMeta = document.querySelector("meta[name='theme-color']");
 const shareButton = document.getElementById("share-site");
+const commandForm = document.getElementById("command-form");
+const commandInput = document.getElementById("global-reset-input");
 
 applyTheme(getStoredTheme());
 
@@ -33,9 +35,7 @@ document.querySelectorAll("[data-timer]").forEach((card) => {
   const id = card.dataset.timer;
   timerEls.set(id, {
     card,
-    form: card.querySelector("[data-form]"),
     manualForm: card.querySelector("[data-manual-form]"),
-    input: card.querySelector("[name='resetText']"),
     hoursInput: card.querySelector("[name='hours']"),
     minutesInput: card.querySelector("[name='minutes']"),
     ring: card.querySelector("[data-ring]"),
@@ -48,7 +48,6 @@ document.querySelectorAll("[data-timer]").forEach((card) => {
     minuteHand: card.querySelector("[data-minute-hand]"),
     secondHand: card.querySelector("[data-second-hand]"),
     resetMarker: card.querySelector("[data-reset-marker]"),
-    quickButtons: card.querySelectorAll("[data-quick-minutes]"),
     swatchButtons: card.querySelectorAll("[data-swatch]"),
   });
 });
@@ -58,29 +57,9 @@ timerEls.forEach((els, id) => {
   els.tabToggle.checked = settings[id]?.showInTab !== false;
   applyClockMode(id, settings[id]?.clockMode || "digital");
 
-  els.form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    startTimerFromText(id, els.input.value);
-  });
-
   els.manualForm.addEventListener("submit", (event) => {
     event.preventDefault();
     startTimerFromManualInputs(id);
-  });
-
-  els.input.addEventListener("paste", () => {
-    window.setTimeout(() => {
-      const reset = parseResetText(els.input.value);
-      if (reset) {
-        startTimer(id, reset);
-      }
-    });
-  });
-
-  els.quickButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      startTimer(id, Number(button.dataset.quickMinutes) * 60 * 1000);
-    });
   });
 
   els.swatchButtons.forEach((button) => {
@@ -102,24 +81,27 @@ timerEls.forEach((els, id) => {
   });
 });
 
-document.querySelectorAll("[data-example]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const target = getPreferredInput();
-    target.value = button.dataset.example;
-    target.focus();
-  });
+prefillResetTextFromUrl();
+
+commandForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  startTimerFromText(getSelectedTargetId(), commandInput.value, commandInput);
 });
 
-prefillResetTextFromUrl();
+document.querySelectorAll("[data-global-quick-minutes]").forEach((button) => {
+  button.addEventListener("click", () => {
+    startTimer(getSelectedTargetId(), Number(button.dataset.globalQuickMinutes) * 60 * 1000);
+  });
+});
 
 document.getElementById("reset-all").addEventListener("click", () => {
   Object.keys(TIMER_CONFIG).forEach((id) => delete state[id]);
   saveState();
   timerEls.forEach((els) => {
-    els.input.value = "";
     els.hoursInput.value = "";
     els.minutesInput.value = "";
   });
+  commandInput.value = "";
   render();
 });
 
@@ -136,14 +118,13 @@ shareButton.addEventListener("click", shareSite);
 render();
 window.setInterval(render, 1000);
 
-function startTimerFromText(id, text) {
+function startTimerFromText(id, text, input = commandInput) {
   const reset = parseResetText(text);
-  const els = timerEls.get(id);
 
   if (!reset) {
-    els.input.setCustomValidity("Try text like: Resets in 42 min, Resets 1:57 PM, 1h 20m, or 5 hours.");
-    els.input.reportValidity();
-    window.setTimeout(() => els.input.setCustomValidity(""), 1600);
+    input.setCustomValidity("Try text like: Resets in 42 min, Resets 1:57 PM, 1h 20m, or 5 hours.");
+    input.reportValidity();
+    window.setTimeout(() => input.setCustomValidity(""), 1600);
     return;
   }
 
@@ -187,7 +168,7 @@ function startTimer(id, reset) {
   saveState();
 
   const els = timerEls.get(id);
-  els.input.value = "";
+  commandInput.value = "";
   els.hoursInput.value = "";
   els.minutesInput.value = "";
   render();
@@ -309,6 +290,7 @@ function render() {
     });
   });
 
+  document.body.classList.toggle("has-active-timer", active.length > 0);
   renderDocumentChrome(active);
 }
 
@@ -400,22 +382,15 @@ function renderDocumentChrome(active) {
   });
 }
 
-function getPreferredInput() {
-  const activeElement = document.activeElement;
-  if (activeElement?.matches?.("[name='resetText']")) {
-    return activeElement;
-  }
-
-  return timerEls.get("codex").input;
-}
-
 function prefillResetTextFromUrl() {
   const resetText = new URLSearchParams(window.location.search).get("resetText");
   if (!resetText) return;
 
-  timerEls.forEach((els) => {
-    els.input.value = resetText;
-  });
+  commandInput.value = resetText;
+}
+
+function getSelectedTargetId() {
+  return document.querySelector("[name='targetTimer']:checked")?.value || "codex";
 }
 
 function renderAnalogClock(els, nowMs, resetMs) {

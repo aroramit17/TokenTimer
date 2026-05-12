@@ -45,11 +45,26 @@
         </div>
       </section>
 
-      <section class="example-strip" id="examples" aria-label="Timer examples">
-        <button type="button" data-example="Resets in 42 min">Resets in 42 min</button>
-        <button type="button" data-example="Resets 1:57 PM">Resets 1:57 PM</button>
-        <button type="button" data-example="1h 20m">1h 20m</button>
-        <button type="button" data-example="Resets in 5 hours">Resets in 5 hours</button>
+      <section class="command-panel" id="examples" aria-label="Start a reset timer">
+        <form class="command-bar" id="command-form">
+          <fieldset class="target-toggle" aria-label="Timer target">
+            <label>
+              <input type="radio" name="targetTimer" value="codex" checked>
+              <span>Codex</span>
+            </label>
+            <label>
+              <input type="radio" name="targetTimer" value="claude">
+              <span>Claude</span>
+            </label>
+          </fieldset>
+          <input id="global-reset-input" name="resetText" type="text" autocomplete="off" placeholder="Paste reset time to start a new timer...">
+          <button type="submit">Start</button>
+        </form>
+        <div class="global-quick-row" aria-label="Quick add timers">
+          <button type="button" data-global-quick-minutes="15">15m</button>
+          <button type="button" data-global-quick-minutes="60">1h</button>
+          <button type="button" data-global-quick-minutes="300">5h</button>
+        </div>
       </section>
 
       <section class="timer-grid" aria-label="Usage reset timers">
@@ -61,25 +76,6 @@
             </div>
             <span class="status-pill" data-status>Idle</span>
           </div>
-
-          <label class="tab-toggle">
-            <input type="checkbox" data-tab-toggle checked>
-            <span>Show Codex in browser tab</span>
-          </label>
-
-          <fieldset class="mode-toggle" data-mode-toggle>
-            <legend>Clock style</legend>
-            <div class="mode-row">
-              <label>
-                <input type="radio" name="codex-mode" value="digital" checked>
-                <span>Digital</span>
-              </label>
-              <label>
-                <input type="radio" name="codex-mode" value="analog">
-                <span>Analog</span>
-              </label>
-            </div>
-          </fieldset>
 
           <div class="clock-wrap">
             <div class="clock-ring codex-ring" data-ring>
@@ -105,41 +101,51 @@
             </div>
           </div>
 
-          <form class="paste-form" data-form>
-            <label for="codex-input">Paste reset text</label>
-            <div class="input-row">
-              <input id="codex-input" name="resetText" type="text" autocomplete="off" placeholder="Resets in 42 min or Resets 1:57 PM">
-              <button type="submit">Start</button>
-            </div>
-          </form>
+          <details class="card-settings">
+            <summary>Modify</summary>
+            <div class="settings-stack">
+              <label class="tab-toggle">
+                <input type="checkbox" data-tab-toggle checked>
+                <span>Show Codex in browser tab</span>
+              </label>
 
-          <form class="manual-form" data-manual-form aria-label="Codex manual timer">
-            <label>Set manually</label>
-            <div class="manual-row">
-              <input name="hours" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" aria-label="Codex hours">
-              <span>h</span>
-              <input name="minutes" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="42" aria-label="Codex minutes">
-              <span>m</span>
-              <button type="submit">Set</button>
-            </div>
-          </form>
+              <fieldset class="mode-toggle" data-mode-toggle>
+                <legend>Clock style</legend>
+                <div class="mode-row">
+                  <label>
+                    <input type="radio" name="codex-mode" value="digital" checked>
+                    <span>Digital</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="codex-mode" value="analog">
+                    <span>Analog</span>
+                  </label>
+                </div>
+              </fieldset>
 
-          <fieldset class="swatch-field" data-swatch-field>
-            <legend>Accent</legend>
-            <div class="swatch-row">
-              <button type="button" class="swatch" data-swatch="#f97316" style="--swatch: #f97316;" aria-label="Use orange accent"></button>
-              <button type="button" class="swatch" data-swatch="#111111" style="--swatch: #111111;" aria-label="Use black accent"></button>
-              <button type="button" class="swatch is-selected" data-swatch="#2563eb" style="--swatch: #2563eb;" aria-label="Use blue accent"></button>
-              <button type="button" class="swatch" data-swatch="#7c3aed" style="--swatch: #7c3aed;" aria-label="Use violet accent"></button>
-              <button type="button" class="swatch" data-swatch="#e11d48" style="--swatch: #e11d48;" aria-label="Use rose accent"></button>
-            </div>
-          </fieldset>
+              <form class="manual-form" data-manual-form aria-label="Codex manual timer">
+                <label>Set manually</label>
+                <div class="manual-row">
+                  <input name="hours" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" aria-label="Codex hours">
+                  <span>h</span>
+                  <input name="minutes" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="42" aria-label="Codex minutes">
+                  <span>m</span>
+                  <button type="submit">Set</button>
+                </div>
+              </form>
 
-          <div class="quick-row" aria-label="Codex quick timers">
-            <button type="button" data-quick-minutes="15">15m</button>
-            <button type="button" data-quick-minutes="60">1h</button>
-            <button type="button" data-quick-minutes="300">5h</button>
-          </div>
+              <fieldset class="swatch-field" data-swatch-field>
+                <legend>Accent</legend>
+                <div class="swatch-row">
+                  <button type="button" class="swatch" data-swatch="#f97316" style="--swatch: #f97316;" aria-label="Use orange accent"></button>
+                  <button type="button" class="swatch" data-swatch="#111111" style="--swatch: #111111;" aria-label="Use black accent"></button>
+                  <button type="button" class="swatch is-selected" data-swatch="#2563eb" style="--swatch: #2563eb;" aria-label="Use blue accent"></button>
+                  <button type="button" class="swatch" data-swatch="#7c3aed" style="--swatch: #7c3aed;" aria-label="Use violet accent"></button>
+                  <button type="button" class="swatch" data-swatch="#e11d48" style="--swatch: #e11d48;" aria-label="Use rose accent"></button>
+                </div>
+              </fieldset>
+            </div>
+          </details>
         </article>
 
         <article class="timer-card" data-timer="claude">
@@ -150,25 +156,6 @@
             </div>
             <span class="status-pill" data-status>Idle</span>
           </div>
-
-          <label class="tab-toggle">
-            <input type="checkbox" data-tab-toggle checked>
-            <span>Show Claude in browser tab</span>
-          </label>
-
-          <fieldset class="mode-toggle" data-mode-toggle>
-            <legend>Clock style</legend>
-            <div class="mode-row">
-              <label>
-                <input type="radio" name="claude-mode" value="digital" checked>
-                <span>Digital</span>
-              </label>
-              <label>
-                <input type="radio" name="claude-mode" value="analog">
-                <span>Analog</span>
-              </label>
-            </div>
-          </fieldset>
 
           <div class="clock-wrap">
             <div class="clock-ring claude-ring" data-ring>
@@ -194,68 +181,74 @@
             </div>
           </div>
 
-          <form class="paste-form" data-form>
-            <label for="claude-input">Paste reset text</label>
-            <div class="input-row">
-              <input id="claude-input" name="resetText" type="text" autocomplete="off" placeholder="Resets in 42 min or Resets 1:57 PM">
-              <button type="submit">Start</button>
-            </div>
-          </form>
+          <details class="card-settings">
+            <summary>Modify</summary>
+            <div class="settings-stack">
+              <label class="tab-toggle">
+                <input type="checkbox" data-tab-toggle checked>
+                <span>Show Claude in browser tab</span>
+              </label>
 
-          <form class="manual-form" data-manual-form aria-label="Claude manual timer">
-            <label>Set manually</label>
-            <div class="manual-row">
-              <input name="hours" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" aria-label="Claude hours">
-              <span>h</span>
-              <input name="minutes" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="42" aria-label="Claude minutes">
-              <span>m</span>
-              <button type="submit">Set</button>
-            </div>
-          </form>
+              <fieldset class="mode-toggle" data-mode-toggle>
+                <legend>Clock style</legend>
+                <div class="mode-row">
+                  <label>
+                    <input type="radio" name="claude-mode" value="digital" checked>
+                    <span>Digital</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="claude-mode" value="analog">
+                    <span>Analog</span>
+                  </label>
+                </div>
+              </fieldset>
 
-          <fieldset class="swatch-field" data-swatch-field>
-            <legend>Accent</legend>
-            <div class="swatch-row">
-              <button type="button" class="swatch is-selected" data-swatch="#f97316" style="--swatch: #f97316;" aria-label="Use orange accent"></button>
-              <button type="button" class="swatch" data-swatch="#111111" style="--swatch: #111111;" aria-label="Use black accent"></button>
-              <button type="button" class="swatch" data-swatch="#2563eb" style="--swatch: #2563eb;" aria-label="Use blue accent"></button>
-              <button type="button" class="swatch" data-swatch="#7c3aed" style="--swatch: #7c3aed;" aria-label="Use violet accent"></button>
-              <button type="button" class="swatch" data-swatch="#e11d48" style="--swatch: #e11d48;" aria-label="Use rose accent"></button>
-            </div>
-          </fieldset>
+              <form class="manual-form" data-manual-form aria-label="Claude manual timer">
+                <label>Set manually</label>
+                <div class="manual-row">
+                  <input name="hours" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" aria-label="Claude hours">
+                  <span>h</span>
+                  <input name="minutes" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="42" aria-label="Claude minutes">
+                  <span>m</span>
+                  <button type="submit">Set</button>
+                </div>
+              </form>
 
-          <div class="quick-row" aria-label="Claude quick timers">
-            <button type="button" data-quick-minutes="15">15m</button>
-            <button type="button" data-quick-minutes="60">1h</button>
-            <button type="button" data-quick-minutes="300">5h</button>
-          </div>
+              <fieldset class="swatch-field" data-swatch-field>
+                <legend>Accent</legend>
+                <div class="swatch-row">
+                  <button type="button" class="swatch is-selected" data-swatch="#f97316" style="--swatch: #f97316;" aria-label="Use orange accent"></button>
+                  <button type="button" class="swatch" data-swatch="#111111" style="--swatch: #111111;" aria-label="Use black accent"></button>
+                  <button type="button" class="swatch" data-swatch="#2563eb" style="--swatch: #2563eb;" aria-label="Use blue accent"></button>
+                  <button type="button" class="swatch" data-swatch="#7c3aed" style="--swatch: #7c3aed;" aria-label="Use violet accent"></button>
+                  <button type="button" class="swatch" data-swatch="#e11d48" style="--swatch: #e11d48;" aria-label="Use rose accent"></button>
+                </div>
+              </fieldset>
+            </div>
+          </details>
         </article>
       </section>
 
-      <section class="content-grid" id="guide" aria-label="Usage guide">
-        <article class="info-panel">
-          <p class="eyebrow">Paste first</p>
-          <h2>Built for reset messages</h2>
-          <p>Paste messages like <strong>Resets in 42 min</strong> or <strong>Resets 1:57 PM</strong>. Relative durations start immediately, while AM/PM times count down to the next matching clock time.</p>
-        </article>
-        <article class="info-panel">
-          <p class="eyebrow">Then repeat</p>
-          <h2>Five-hour cycles</h2>
-          <p>When a timer reaches zero, it automatically rolls forward by five hours so the next usage window is already waiting in the tab.</p>
-        </article>
-        <article class="info-panel">
-          <p class="eyebrow">Your tab</p>
-          <h2>Choose what shows</h2>
-          <p>Use the checkbox on each timer to decide whether Codex, Claude, or both appear in the browser tab title and favicon indicator.</p>
-        </article>
-      </section>
-
-      <section class="privacy-panel" id="privacy" aria-labelledby="privacy-title">
-        <p class="eyebrow">Privacy policy</p>
-        <h2 id="privacy-title">Private by default</h2>
-        <p>TokenTimer runs in your browser. Timers, theme, display mode, tab preferences, and accent choices are saved only in this browser's local storage. The site does not require an account, does not send pasted reset text to a server, and does not sell or share personal data.</p>
-        <p>If you clear browser storage, your saved timers and preferences are removed. Sharing uses your browser's built-in share sheet when available, or copies the site link to your clipboard.</p>
-      </section>
+      <details class="help-section" id="guide">
+        <summary>Guide and privacy</summary>
+        <section class="content-grid" aria-label="Usage guide">
+          <article class="info-panel">
+            <p class="eyebrow">Paste first</p>
+            <h2>Built for reset messages</h2>
+            <p>Paste messages like <strong>Resets in 42 min</strong> or <strong>Resets 1:57 PM</strong>. Relative durations start immediately, while AM/PM times count down to the next matching clock time.</p>
+          </article>
+          <article class="info-panel">
+            <p class="eyebrow">Then repeat</p>
+            <h2>Five-hour cycles</h2>
+            <p>When a timer reaches zero, it automatically rolls forward by five hours so the next usage window is already waiting in the tab.</p>
+          </article>
+          <article class="info-panel" id="privacy">
+            <p class="eyebrow">Privacy policy</p>
+            <h2>Private by default</h2>
+            <p>TokenTimer runs in your browser. Timers and preferences are saved only in local storage. The site does not require an account, does not send pasted reset text to a server, and does not sell or share personal data.</p>
+          </article>
+        </section>
+      </details>
     </main>
 
     <footer class="site-footer">
