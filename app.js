@@ -11,12 +11,12 @@ const TIMER_CONFIG = {
   codex: {
     label: "Codex",
     short: "Cx",
-    color: "#f97316",
+    color: "#2563eb",
   },
   claude: {
     label: "Claude",
     short: "Cl",
-    color: "#111111",
+    color: "#f97316",
   },
 };
 
@@ -29,7 +29,7 @@ const themeLabel = document.querySelector("[data-theme-label]");
 const themeMeta = document.querySelector("meta[name='theme-color']");
 const shareButton = document.getElementById("share-site");
 
-applyTheme(localStorage.getItem(THEME_KEY) || "light");
+applyTheme(getStoredTheme());
 
 document.querySelectorAll("[data-timer]").forEach((card) => {
   const id = card.dataset.timer;
@@ -49,6 +49,7 @@ document.querySelectorAll("[data-timer]").forEach((card) => {
     hourHand: card.querySelector("[data-hour-hand]"),
     minuteHand: card.querySelector("[data-minute-hand]"),
     secondHand: card.querySelector("[data-second-hand]"),
+    resetMarker: card.querySelector("[data-reset-marker]"),
     quickButtons: card.querySelectorAll("[data-quick-minutes]"),
     swatchButtons: card.querySelectorAll("[data-swatch]"),
   });
@@ -124,7 +125,10 @@ document.getElementById("reset-all").addEventListener("click", () => {
   render();
 });
 
-themeToggle.addEventListener("click", () => {
+document.addEventListener("click", (event) => {
+  const toggle = event.target.closest("#theme-toggle");
+  if (!toggle) return;
+
   const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   applyTheme(nextTheme);
 });
@@ -291,11 +295,12 @@ function render() {
     const endsAt = new Date(timer.endsAt);
 
     els.card.classList.toggle("is-expired", remaining <= 1000);
+    els.card.classList.add("is-running");
     els.countdown.textContent = formatDuration(remaining);
     els.subtitle.textContent = `Resets at ${formatClockTime(endsAt)}`;
     els.status.textContent = "Running";
     els.ring.style.setProperty("--progress", `${Math.max(0, Math.min(1, progress)) * 360}deg`);
-    renderAnalogHands(els, remaining);
+    renderAnalogClock(els, now, timer.endsAt);
 
     active.push({
       id,
@@ -367,12 +372,13 @@ function applyAccent(id, color) {
 
 function renderEmpty(els) {
   els.card.classList.remove("is-expired");
+  els.card.classList.remove("is-running");
   els.card.dataset.clockMode = els.card.dataset.clockMode || "digital";
   els.countdown.textContent = "--:--";
   els.subtitle.textContent = "Paste a reset";
   els.status.textContent = "Idle";
   els.ring.style.setProperty("--progress", "0deg");
-  renderAnalogHands(els, 0);
+  renderAnalogClock(els, Date.now(), null);
 }
 
 function renderDocumentChrome(active) {
@@ -416,11 +422,11 @@ function prefillResetTextFromUrl() {
   });
 }
 
-function renderAnalogHands(els, remaining) {
-  const totalSeconds = Math.max(0, Math.ceil(remaining / 1000));
-  const seconds = totalSeconds % 60;
-  const minutes = Math.floor(totalSeconds / 60) % 60;
-  const hours = Math.floor(totalSeconds / 3600) % 12;
+function renderAnalogClock(els, nowMs, resetMs) {
+  const now = new Date(nowMs);
+  const seconds = now.getSeconds();
+  const minutes = now.getMinutes();
+  const hours = now.getHours() % 12;
 
   const secondAngle = (seconds * 6) - 90;
   const minuteAngle = ((minutes + (seconds / 60)) * 6) - 90;
@@ -429,6 +435,18 @@ function renderAnalogHands(els, remaining) {
   els.secondHand.style.transform = `rotate(${secondAngle}deg)`;
   els.minuteHand.style.transform = `rotate(${minuteAngle}deg)`;
   els.hourHand.style.transform = `rotate(${hourAngle}deg)`;
+
+  if (!resetMs) {
+    els.resetMarker.style.opacity = "0";
+    return;
+  }
+
+  const reset = new Date(resetMs);
+  const resetHours = reset.getHours() % 12;
+  const resetMinutes = reset.getMinutes();
+  const resetAngle = ((resetHours + (resetMinutes / 60)) * 30) - 90;
+  els.resetMarker.style.opacity = "";
+  els.resetMarker.style.transform = `rotate(${resetAngle}deg) translateX(88px) translate(-50%, -50%)`;
 }
 
 async function shareSite() {
@@ -524,7 +542,11 @@ function setFavicon(url) {
 function applyTheme(theme) {
   const nextTheme = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = nextTheme;
-  localStorage.setItem(THEME_KEY, nextTheme);
+  try {
+    localStorage.setItem(THEME_KEY, nextTheme);
+  } catch {
+    document.documentElement.dataset.themeStorage = "unavailable";
+  }
 
   if (themeToggle) {
     themeToggle.setAttribute("aria-pressed", String(nextTheme === "dark"));
@@ -542,6 +564,14 @@ function applyTheme(theme) {
     render();
   } else {
     renderDocumentChrome([]);
+  }
+}
+
+function getStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) || "light";
+  } catch {
+    return "light";
   }
 }
 
@@ -610,13 +640,14 @@ function saveSettings() {
 
 function normalizeSettings() {
   const legacyDefaults = {
-    codex: "#15957a",
-    claude: "#b75c2d",
+    codex: ["#15957a", "#f97316"],
+    claude: ["#b75c2d", "#111111"],
   };
   let changed = false;
 
   Object.keys(TIMER_CONFIG).forEach((id) => {
-    if (settings[id]?.color?.toLowerCase() === legacyDefaults[id]) {
+    const savedColor = settings[id]?.color?.toLowerCase();
+    if (legacyDefaults[id]?.includes(savedColor)) {
       settings[id].color = TIMER_CONFIG[id].color;
       changed = true;
     }

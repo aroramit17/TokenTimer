@@ -35,8 +35,8 @@
       <section class="hero" id="timers" aria-labelledby="app-title">
         <div class="hero-copy">
           <p class="eyebrow">AI usage reset clocks</p>
-          <h1 id="app-title">Know exactly when Codex and Claude come back.</h1>
-          <p class="lede">Paste the reset text, set a manual duration, pick what appears in the tab, and keep both reset windows counting down in one place.</p>
+          <h1 id="app-title">Stop clicking to check your usage reset.</h1>
+          <p class="lede">Do not let usage limits distract deep work. Paste the reset text once, keep the countdown in your tab, and get back to building.</p>
         </div>
         <div class="hero-actions">
           <button class="ghost-button" id="reset-all" type="button">Clear all</button>
@@ -95,6 +95,7 @@
                   <span class="watch-marker marker-3"></span>
                   <span class="watch-marker marker-6"></span>
                   <span class="watch-marker marker-9"></span>
+                  <span class="reset-marker" data-reset-marker></span>
                   <span class="watch-hand hour-hand" data-hour-hand></span>
                   <span class="watch-hand minute-hand" data-minute-hand></span>
                   <span class="watch-hand second-hand" data-second-hand></span>
@@ -126,9 +127,9 @@
           <fieldset class="swatch-field" data-swatch-field>
             <legend>Accent</legend>
             <div class="swatch-row">
-              <button type="button" class="swatch is-selected" data-swatch="#f97316" style="--swatch: #f97316;" aria-label="Use orange accent"></button>
+              <button type="button" class="swatch" data-swatch="#f97316" style="--swatch: #f97316;" aria-label="Use orange accent"></button>
               <button type="button" class="swatch" data-swatch="#111111" style="--swatch: #111111;" aria-label="Use black accent"></button>
-              <button type="button" class="swatch" data-swatch="#2563eb" style="--swatch: #2563eb;" aria-label="Use blue accent"></button>
+              <button type="button" class="swatch is-selected" data-swatch="#2563eb" style="--swatch: #2563eb;" aria-label="Use blue accent"></button>
               <button type="button" class="swatch" data-swatch="#7c3aed" style="--swatch: #7c3aed;" aria-label="Use violet accent"></button>
               <button type="button" class="swatch" data-swatch="#e11d48" style="--swatch: #e11d48;" aria-label="Use rose accent"></button>
             </div>
@@ -183,6 +184,7 @@
                   <span class="watch-marker marker-3"></span>
                   <span class="watch-marker marker-6"></span>
                   <span class="watch-marker marker-9"></span>
+                  <span class="reset-marker" data-reset-marker></span>
                   <span class="watch-hand hour-hand" data-hour-hand></span>
                   <span class="watch-hand minute-hand" data-minute-hand></span>
                   <span class="watch-hand second-hand" data-second-hand></span>
