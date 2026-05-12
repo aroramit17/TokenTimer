@@ -3,9 +3,7 @@ const STORAGE_KEY = "usage-reset-timers";
 const SETTINGS_KEY = "usage-reset-settings";
 const THEME_KEY = "tokentimer-theme";
 const DEFAULT_TITLE = "TokenTimer";
-const SOON_THRESHOLD = 30 * 60 * 1000;
 const BLINK_THRESHOLD = 60 * 1000;
-const ALERT_COLOR = "#22c55e";
 
 const TIMER_CONFIG = {
   codex: {
@@ -393,13 +391,11 @@ function renderDocumentChrome(active) {
   visible.sort((a, b) => a.remaining - b.remaining);
   const soonest = visible[0].remaining;
   const isBlinking = soonest <= BLINK_THRESHOLD;
-  const isSoon = soonest <= SOON_THRESHOLD;
   const blinkOn = Math.floor(Date.now() / 1000) % 2 === 0;
   const title = visible.map((timer) => `${formatCompact(timer.remaining)} ${timer.short}`).join(" | ");
 
   document.title = isBlinking && blinkOn ? `RESET SOON | ${title}` : title;
   drawFavicon(visible, {
-    alertColor: isSoon ? ALERT_COLOR : null,
     blink: isBlinking && blinkOn,
   });
 }
@@ -508,16 +504,15 @@ function drawFavicon(active, options = {}) {
   }
 
   const timer = active[0];
-  const accent = options.alertColor || timer.color;
-  const background = options.blink ? ink : accent;
-  const foreground = options.blink ? accent : "#ffffff";
+  const background = "#000000";
+  const foreground = "#ffffff";
   const label = formatFaviconLabel(timer.remaining);
 
   ctx.fillStyle = background;
   roundedRect(ctx, 8, 8, 112, 112, 28);
   ctx.fill();
   ctx.lineWidth = 8;
-  ctx.strokeStyle = options.blink ? accent : ink;
+  ctx.strokeStyle = options.blink ? "#ffffff" : "#000000";
   ctx.stroke();
 
   ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
@@ -533,7 +528,7 @@ function drawFavicon(active, options = {}) {
   ctx.font = "900 18px Arial, sans-serif";
   ctx.fillText(timer.short, 64, 104);
 
-  ctx.fillStyle = options.blink ? accent : "rgba(255, 255, 255, 0.82)";
+  ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
   roundedRect(ctx, 16, 112, 96 * Math.max(0.05, 1 - timer.progress), 7, 4);
   ctx.fill();
 
