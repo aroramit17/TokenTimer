@@ -480,7 +480,7 @@ function flashShareLabel(label) {
 
 function drawFavicon(active, options = {}) {
   const canvas = document.createElement("canvas");
-  const size = 64;
+  const size = 128;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
@@ -491,42 +491,76 @@ function drawFavicon(active, options = {}) {
   const line = styles.getPropertyValue("--line").trim() || "#d8cec0";
   const ink = styles.getPropertyValue("--ink").trim() || "#171310";
 
-  ctx.fillStyle = paper;
-  ctx.beginPath();
-  ctx.arc(32, 32, 30, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.lineWidth = 9;
-  ctx.strokeStyle = line;
-  ctx.beginPath();
-  ctx.arc(32, 32, 23, 0, Math.PI * 2);
-  ctx.stroke();
-
   if (!active.length) {
-    ctx.fillStyle = ink;
-    ctx.beginPath();
-    ctx.arc(32, 32, 8, 0, Math.PI * 2);
+    ctx.fillStyle = paper;
+    roundedRect(ctx, 10, 10, 108, 108, 26);
     ctx.fill();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = line;
+    ctx.stroke();
+    ctx.fillStyle = ink;
+    ctx.font = "900 40px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("TT", 64, 66);
     setFavicon(canvas.toDataURL("image/png"));
     return;
   }
 
-  const timers = active.slice(0, 2);
-  timers.forEach((timer, index) => {
-    const start = timers.length === 1 ? -Math.PI / 2 : (index === 0 ? -Math.PI / 2 : Math.PI / 2);
-    const range = timers.length === 1 ? Math.PI * 2 : Math.PI;
-    ctx.strokeStyle = options.blink ? ink : (options.alertColor || timer.color);
-    ctx.beginPath();
-    ctx.arc(32, 32, 23, start, start + (range * timer.progress));
-    ctx.stroke();
-  });
+  const timer = active[0];
+  const accent = options.alertColor || timer.color;
+  const background = options.blink ? ink : accent;
+  const foreground = options.blink ? accent : "#ffffff";
+  const label = formatFaviconLabel(timer.remaining);
 
-  ctx.fillStyle = options.blink ? ink : (options.alertColor || active[0].color);
-  ctx.beginPath();
-  ctx.arc(32, 32, 8, 0, Math.PI * 2);
+  ctx.fillStyle = background;
+  roundedRect(ctx, 8, 8, 112, 112, 28);
+  ctx.fill();
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = options.blink ? accent : ink;
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+  roundedRect(ctx, 18, 18, 92, 18, 9);
+  ctx.fill();
+
+  ctx.fillStyle = foreground;
+  ctx.font = "900 52px Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 64, 67);
+
+  ctx.font = "900 18px Arial, sans-serif";
+  ctx.fillText(timer.short, 64, 104);
+
+  ctx.fillStyle = options.blink ? accent : "rgba(255, 255, 255, 0.82)";
+  roundedRect(ctx, 16, 112, 96 * Math.max(0.05, 1 - timer.progress), 7, 4);
   ctx.fill();
 
   setFavicon(canvas.toDataURL("image/png"));
+}
+
+function formatFaviconLabel(ms) {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.ceil(seconds / 60);
+  const hours = Math.ceil(minutes / 60);
+  const days = Math.ceil(hours / 24);
+
+  if (seconds < 60) return `${seconds}s`;
+  if (minutes < 60) return `${minutes}m`;
+  if (hours < 24) return `${hours}h`;
+  return `${days}d`;
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
 }
 
 function setFavicon(url) {
